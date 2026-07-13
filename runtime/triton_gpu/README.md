@@ -21,6 +21,26 @@ docker run -it --name "sensevoice-server" --gpus all --net host -v $your_mount_d
 
 ### Export SenseVoice Model to Onnx
 Please follow the official guide of FunASR to export the sensevoice onnx file. Also, you need to download the tokenizer file by yourself. 
+```
+from funasr import AutoModel
+import os
+
+# 1. 改为你想保存 ONNX 文件的本地目标目录
+output_dir = os.path.abspath("/root/FunASR/runtime/triton_gpu/onnx") 
+
+# 2. 【核心】model 参数直接填写你本地下载好的模型文件夹绝对路径
+# 例如："/home/user/models/SenseVoiceSmall"
+local_model_path = "/root/FunASR/runtime/triton_gpu/iic" 
+
+print("正在从本地路径加载并转换模型...")
+model = AutoModel(model=local_model_path)
+
+# 3. 执行导出
+# opset_version 建议设为 14 或以上，以完美兼容 Triton 的 ONNX Runtime Backend
+model.export(type="onnx", quantize=False, opset_version=18, save_dir=output_dir)
+
+print(f"导出成功！ONNX 相关文件已保存在: {output_dir}")
+```
 ### Launch Server
 Log of directory tree:
 ```sh
@@ -28,6 +48,7 @@ model_repo_sense_voice_small
 |-- encoder
 |   |-- 1
 |   |   `-- model.onnx -> /your/path/model.onnx
+|   |   `-- model.data -> /your/path/model.data
 |   `-- config.pbtxt
 |-- feature_extractor
 |   |-- 1
@@ -49,7 +70,7 @@ model_repo_sense_voice_small
 
 # launch the service 
 tritonserver --model-repository /workspace/model_repo_sensevoice_small \
-             --pinned-memory-pool-byte-size=512000000 \
+             --pinned-memory-pool-byte-size=512000000 \     #根据显存实际情况
              --cuda-memory-pool-byte-size=0:1024000000
 ```
 
